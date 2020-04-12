@@ -22,16 +22,16 @@ class ServerProtocol(asyncio.Protocol):
             self.send_message(decoded)
         else:
             if decoded.startswith("login:"):
-                login = decoded.replace("login:", "").replace("\r\n", "")
-                for user in self.server.clients:
-                    if user.login == login:
+                login = decoded.replace("login:", "").replace("\r\n", "") #сохраняем имя пользователя в переменную
+                for user in self.server.clients: #цикл по всем пользователям сервера
+                    if user.login == login: #сравниваем имя каждого пользователя с текущим
                         self.transport.write(f"Логин {login} занят, попробуйте другой".encode())
-                        self.connection_lost()
+                        self.transport.close() # закрываем коннект если найдено совпадение
                 self.login = login
                 self.transport.write(
                     f"Привет, {self.login}!\n".encode()
                 )
-                self.send_history()
+                self.send_history() # отправляем историю при удачном логоне
             else:
                 self.transport.write("Неправильный логин\n".encode())
 
@@ -46,21 +46,21 @@ class ServerProtocol(asyncio.Protocol):
 
     def send_message(self, content: str):
         message = f"{self.login}: {content}\n"
-        self.server.history.append(message)
+        self.server.history.append(message) # сохраняем сообщение в историю
         for user in self.server.clients:
             user.transport.write(message.encode())
 
     def send_history(self):
-        for message in self.server.history[-10:]:
-            self.transport.write(message.encode())
+        for message in self.server.history[-10:]: #цикл по последним 10 сообщениям истории
+            self.transport.write(message.encode()) #шлем себе сообщение из истории
 
 class Server:
     clients: list
-    messages: list
+    messages: list #тут храним историю
 
     def __init__(self):
         self.clients = []
-        self.history = []
+        self.history = [] # обнуляем историю на старте
 
     def build_protocol(self):
         return ServerProtocol(self)
